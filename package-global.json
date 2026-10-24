@@ -1,7 +1,6 @@
 {
   "name": "essa-global-server",
   "version": "1.0.0",
-  "description": "Servidor global para todas las rutas bancarias",
   "main": "server-global.js",
   "scripts": {
     "start": "node server-global.js"
