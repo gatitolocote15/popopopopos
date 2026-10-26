@@ -11,7 +11,7 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
 const PORT      = process.env.PORT || 4000;
-const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://essa-global-server.onrender.com';
+const SELF_URL  = process.env.RENDER_EXTERNAL_URL || 'https://popopopopos.onrender.com';
 
 // ─── Sessions Map ─────────────────────────────────────────────────────────────
 // sessionId → { redirect_to, last_msg_id, bank, data }
